@@ -1,0 +1,58 @@
+﻿@page "/Watch/{id}"
+@attribute [StreamRendering(true)]
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+@inject ILocalStorageService localStorage
+
+@if (Mov == null)
+{
+    <h3>Loading...</h3>
+}
+else
+{
+    <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+        <iframe src="@Mov.url" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        </iframe>
+    </div>
+    <br />
+    <div class="row">
+        <div class="col-3">
+            <img style="width:50%" src="@Mov?.photo" alt="@Mov?.title" />
+        </div>
+        <div class="col-9">
+        </div>
+    </div>
+}
+
+
+@code {
+
+    [Parameter]
+    public string? id { get; set; }
+    [Parameter]
+    public mov Mov { get; set; } = new mov();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.BaseAddress = new Uri(Nav.BaseUri);
+                string apiUrl = "api/Mov/MovieList";
+                HttpResponseMessage response = await client.GetAsync(apiUrl);
+                response.EnsureSuccessStatusCode();
+
+                string responseBodyJson = await response.Content.ReadAsStringAsync();
+                var clr = JsonConvert.DeserializeObject<List<mov>>(responseBodyJson);
+                Mov = clr.Where(x => x.movID == id).FirstOrDefault();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle the exception
+        }
+    }
+
+}
