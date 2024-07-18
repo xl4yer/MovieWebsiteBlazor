@@ -4,26 +4,111 @@
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 @inject ILocalStorageService localStorage
+@using System.Net.Http.Headers
 
-@if (Mov == null)
-{
-    <h3>Loading...</h3>
-}
-else
-{
-    <div style="position: relative; padding-bottom: 56.25%; height: 0;">
-        <iframe src="@Mov.url" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-        </iframe>
-    </div>
-    <br />
+<div class="container">
     <div class="row">
-        <div class="col-3">
-            <img style="width:50%" src="@Mov?.photo" alt="@Mov?.title" />
+        <div class="col-sm-9">
+            @if (Mov == null)
+            {
+                <div class="d-flex justify-content-center my-4">
+                    <div class="loader"></div>
+                </div>
+            }
+            else
+            {
+                <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                    <iframe src="@Mov.url" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius:5px">
+                    </iframe>
+                </div>
+            }
         </div>
-        <div class="col-9">
+        <div class="col-sm-3">
+            @if (Mov.photo != null)
+            {
+                <img src="data:image/bmp;base64, @(Convert.ToBase64String(Mov.photo))" class="img-fluid" />
+                <style>
+                    .img-fluid {
+                        max-width: 100%;
+                        height: auto;
+                        border-radius: 5px;
+                    }
+                </style>
+            }
+            <h5 style="text-align:center" class="card-title">@Mov.title</h5>
+            <p1 style="text-align:center" class="card-title">@Mov.description</p1>
         </div>
     </div>
-}
+</div>
+<br /><br />
+
+<style>
+    body {
+        background-color: #181818;
+    }
+
+    /* Custom CSS for mobile view */
+    @@media (max-width: 767px) {
+        .container .row {
+            --bs-gutter-x: 1.5rem;
+            --bs-gutter-y: 1rem;
+        }
+
+            .container .row > .col {
+                flex: 0 0 auto;
+                width: 50%;
+            }
+    }
+
+    /* Existing CSS */
+    .d-flex {
+        padding-top: 250px;
+    }
+</style>
+
+<div class="container">
+    @if (movies == null || movies.Length == 0)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <div class="loader"></div>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-6 g-4">
+            @foreach (var movie in movies.Take(currentIndex))
+            {
+                <div class="col">
+                    <a href="/Watch/@movie.movID" style="text-decoration:none">
+                        <div class="card h-100">
+                            <img src="data:image/bmp;base64, @(Convert.ToBase64String(@movie.photo))" class="card-img-top" alt="@movie.title">
+                            <div class="card-body">
+                                <h5 class="card-title">@movie.title</h5>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+
+       @*  @if (currentIndex < movies.Length)
+        {
+            <div class="d-flex justify-content-center my-4">
+                <MudButton Disabled="@_loading" OnClick="loadMore" Variant="Variant.Filled" Color="Color.Secondary">
+                    @if (_loading)
+                    {
+                        <div class="loader"></div>
+                    }
+                    else
+                    {
+                        <MudText>Load More</MudText>
+                    }
+                </MudButton>
+            </div>
+        } *@
+    }
+</div>
+
 
 
 @code {
@@ -43,7 +128,6 @@ else
                 string apiUrl = "api/Mov/MovieList";
                 HttpResponseMessage response = await client.GetAsync(apiUrl);
                 response.EnsureSuccessStatusCode();
-
                 string responseBodyJson = await response.Content.ReadAsStringAsync();
                 var clr = JsonConvert.DeserializeObject<List<mov>>(responseBodyJson);
                 Mov = clr.Where(x => x.movID == id).FirstOrDefault();
@@ -53,6 +137,57 @@ else
         {
             // Handle the exception
         }
+    }
+
+    private mov[] movies;
+    private int currentIndex = 12;
+    private const int PageSize = 12;
+    private bool _loading = false;
+    private string txtsearch { get; set; } = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadMovies();
+        }
+    }
+
+    private async Task LoadMovies()
+    {
+        try
+        {
+            using (var client = new HttpClient())
+            {
+                client.BaseAddress = new Uri($"{Nav.BaseUri}");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+                    await localStorage.GetItemAsStringAsync("token"));
+                var response = await client.GetAsync($"api/Mov/MovieList");
+                if (response.IsSuccessStatusCode)
+                {
+                    await Task.Delay(2000);
+                    var contentResponse = await response.Content.ReadAsStringAsync();
+                    movies = JsonConvert.DeserializeObject<mov[]>(contentResponse);
+                    StateHasChanged();
+                }
+                else
+                {
+                    // Handle error
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle exception
+        }
+    }
+
+    private async void loadMore()
+    {
+        _loading = true;
+        await Task.Delay(1000);
+        currentIndex = Math.Min(currentIndex + PageSize, movies.Length);
+        StateHasChanged();
     }
 
 }

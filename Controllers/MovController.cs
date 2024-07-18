@@ -21,5 +21,11 @@ namespace Mov.Controllers
             var ret = await xservices.MovieList();
             return ret;
         }
+        [HttpGet]
+        public async Task<List<mov>> MovSearch(string search)
+        {
+            var ret = await xservices.MovSearch(search);
+            return ret;
+        }
     }
 }

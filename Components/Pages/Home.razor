@@ -7,22 +7,55 @@
 
 <PageTitle>Index</PageTitle>
 
+<style>
+    body {
+        background-color: #181818;
+    }
+
+    /* Custom CSS for mobile view */
+    @@media (max-width: 767px) {
+        .container .row {
+            --bs-gutter-x: 1.5rem;
+            --bs-gutter-y: 1rem;
+        }
+
+            .container .row > .col {
+                flex: 0 0 auto;
+                width: 50%;
+            }
+    }
+
+    /* Existing CSS */
+    .d-flex {
+        padding-top: 250px;
+    }
+</style>
+
 <div class="container">
     @if (movies == null || movies.Length == 0)
     {
         <div class="d-flex justify-content-center my-4">
             <div class="loader"></div>
         </div>
-
-        <style>
-            .d-flex {
-                padding-top: 250px;
-            }
-        </style>
     }
     else
     {
-        <div class="row row-cols-1 row-cols-md-4 g-4">
+        <MudToolBar>
+            <MudSpacer />
+            <MudTextField @bind-Value="txtsearch"
+                          Clearable
+                          Style="color:white"
+                          TextChanged="Search"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          AdornmentColor="Color.Tertiary"
+                          Placeholder="What are you loooking for?"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+        </MudToolBar>
+
+        <br />
+        <div class="row row-cols-1 row-cols-md-6 g-4">
             @foreach (var movie in movies.Take(currentIndex))
             {
                 <div class="col">
@@ -42,26 +75,28 @@
 
         @if (currentIndex < movies.Length)
         {
-            <div class="d-flex justify-content-center my-4">
-                <MudButton Disabled="@_loading" OnClick="loadMore" Variant="Variant.Filled" Color="Color.Secondary">
-                    @if (_loading)
-                    {
-                        <div class="loader"></div>
-                    }
-                    else
-                    {
-                        <MudText>Load More</MudText>
-                    }
-                </MudButton>
-            </div>
+            <center>
+                <div>
+                    <MudButton Disabled="@_loading" OnClick="loadMore" Variant="Variant.Filled" Color="Color.Secondary">
+                        @if (_loading)
+                        {
+                            <div class="loader"></div>
+                        }
+                        else
+                        {
+                            <MudText>Load More</MudText>
+                        }
+                    </MudButton>
+                </div>
+            </center>
         }
     }
 </div>
 
 @code {
     private mov[] movies;
-    private int currentIndex = 8;
-    private const int PageSize = 8;
+    private int currentIndex = 12;
+    private const int PageSize = 12;
     private bool _loading = false;
     private string txtsearch { get; set; } = string.Empty;
 
@@ -109,4 +144,28 @@
         currentIndex = Math.Min(currentIndex + PageSize, movies.Length);
         StateHasChanged();
     }
+    public async Task Search()
+    {
+        if (string.IsNullOrWhiteSpace(txtsearch))
+        {
+            StateHasChanged();
+            return;
+        }
+        using (HttpClient client = new HttpClient())
+        {
+            client.BaseAddress = new Uri($"{Nav.BaseUri}");
+            HttpResponseMessage response = await client.GetAsync($"api/Mov/MovSearch?search={txtsearch}");
+            if (response.IsSuccessStatusCode)
+            {
+                string contentrespose = await response.Content.ReadAsStringAsync();
+                movies = JsonConvert.DeserializeObject<mov[]>(contentrespose);
+                StateHasChanged();
+            }
+            else
+            {
+                //
+            }
+        }
+    }
+
 }
