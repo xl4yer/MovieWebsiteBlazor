@@ -18,8 +18,15 @@
             else
             {
                 <div style="position: relative; padding-bottom: 56.25%; height: 0;">
-                    <iframe src="@Mov.url" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius:5px">
+                    <iframe src="@Mov.url" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" class="box two">
                     </iframe>
+                    <style>
+                        .two {
+                            --mask: radial-gradient(40px at 0 0,#0000 98%,#000) 0/51% 100% no-repeat, radial-gradient(40px at 100% 100%,#0000 98%,#000) 100%/51% 100% no-repeat;
+                            -webkit-mask: var(--mask);
+                            mask: var(--mask);
+                        }
+                    </style>
                 </div>
             }
         </div>
@@ -90,22 +97,6 @@
                 </div>
             }
         </div>
-
-       @*  @if (currentIndex < movies.Length)
-        {
-            <div class="d-flex justify-content-center my-4">
-                <MudButton Disabled="@_loading" OnClick="loadMore" Variant="Variant.Filled" Color="Color.Secondary">
-                    @if (_loading)
-                    {
-                        <div class="loader"></div>
-                    }
-                    else
-                    {
-                        <MudText>Load More</MudText>
-                    }
-                </MudButton>
-            </div>
-        } *@
     }
 </div>
 
@@ -125,7 +116,7 @@
             using (HttpClient client = new HttpClient())
             {
                 client.BaseAddress = new Uri(Nav.BaseUri);
-                string apiUrl = "api/Mov/MovieList";
+                string apiUrl = "api/Mov/Movies";
                 HttpResponseMessage response = await client.GetAsync(apiUrl);
                 response.EnsureSuccessStatusCode();
                 string responseBodyJson = await response.Content.ReadAsStringAsync();
@@ -162,10 +153,10 @@
                 client.BaseAddress = new Uri($"{Nav.BaseUri}");
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
                     await localStorage.GetItemAsStringAsync("token"));
-                var response = await client.GetAsync($"api/Mov/MovieList");
+                var response = await client.GetAsync($"api/Mov/Movies");
                 if (response.IsSuccessStatusCode)
                 {
-                    await Task.Delay(2000);
+                    await Task.Delay(1000);
                     var contentResponse = await response.Content.ReadAsStringAsync();
                     movies = JsonConvert.DeserializeObject<mov[]>(contentResponse);
                     StateHasChanged();
@@ -185,7 +176,6 @@
     private async void loadMore()
     {
         _loading = true;
-        await Task.Delay(1000);
         currentIndex = Math.Min(currentIndex + PageSize, movies.Length);
         StateHasChanged();
     }
